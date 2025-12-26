@@ -39,7 +39,8 @@ class DoctorController extends Controller
             'experience_years' => 'nullable|integer|min:0|max:50',
             'description' => 'nullable|string|max:1000',
             'skills' => 'nullable|string',
-            'color' => 'required|in:blue,green,purple,pink,indigo,red,yellow,teal',
+            'color' => 'nullable|string|max:7', // Allow hex colors
+            'is_active' => 'required|boolean',
         ]);
 
         $skills = $request->skills ? array_map('trim', explode(',', $request->skills)) : [];
@@ -52,8 +53,8 @@ class DoctorController extends Controller
             'experience_years' => $request->experience_years ?? 0,
             'description' => $request->description,
             'skills' => $skills,
-            'color' => $request->color,
-            'is_active' => true,
+            'color' => $request->color ?? '#3B82F6',
+            'is_active' => $request->is_active,
         ]);
 
         return back()->with('success', "Dr. {$doctor->name} berhasil ditambahkan!");
@@ -74,7 +75,8 @@ class DoctorController extends Controller
             'experience_years' => 'nullable|integer|min:0|max:50',
             'description' => 'nullable|string|max:1000',
             'skills' => 'nullable|string',
-            'color' => 'required|in:blue,green,purple,pink,indigo,red,yellow,teal',
+            'color' => 'nullable|string|max:7', // Allow hex colors
+            'is_active' => 'required|boolean',
         ]);
 
         $skills = $request->skills ? array_map('trim', explode(',', $request->skills)) : [];
@@ -86,7 +88,8 @@ class DoctorController extends Controller
             'experience_years' => $request->experience_years ?? 0,
             'description' => $request->description,
             'skills' => $skills,
-            'color' => $request->color,
+            'color' => $request->color ?? '#3B82F6',
+            'is_active' => $request->is_active,
         ]);
 
         return back()->with('success', "Data Dr. {$doctor->name} berhasil diupdate!");
@@ -128,5 +131,15 @@ class DoctorController extends Controller
     {
         $doctor = Doctor::findOrFail($id);
         return view('doctors.show', compact('doctor'));
+    }
+
+    public function edit($id)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        
+        $doctor = Doctor::findOrFail($id);
+        return response()->json($doctor);
     }
 }

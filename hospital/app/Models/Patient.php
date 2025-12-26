@@ -37,7 +37,20 @@ class Patient extends Model
     // Accessors
     public function getAgeAttribute()
     {
-        return $this->birth_date ? $this->birth_date->age : null;
+        if (!$this->birth_date) {
+            return null;
+        }
+        
+        try {
+            return $this->birth_date->age;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    public function getFormattedBirthDateAttribute()
+    {
+        return $this->birth_date ? $this->birth_date->format('d F Y') : null;
     }
 
     // Generate patient ID

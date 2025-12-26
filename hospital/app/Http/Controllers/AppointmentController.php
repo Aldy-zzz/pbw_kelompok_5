@@ -42,25 +42,50 @@ class AppointmentController extends Controller
             // Get doctor
             $doctor = Doctor::findOrFail($request->doctor_id);
 
-            // Create user account for patient
-            $password = Str::random(8);
-            $user = User::create([
-                'name' => $request->nama,
-                'email' => $request->email,
-                'password' => Hash::make($password),
-                'role' => 'patient',
-                'phone' => $request->telepon,
-                'is_active' => true,
-            ]);
+            // Check if user already exists
+            $existingUser = User::where('email', $request->email)->first();
+            
+            if ($existingUser) {
+                // If user exists, check if they already have a patient record
+                $existingPatient = Patient::where('user_id', $existingUser->id)->first();
+                
+                if ($existingPatient) {
+                    // User and patient exist, just create appointment
+                    $user = $existingUser;
+                    $patient = $existingPatient;
+                } else {
+                    // User exists but no patient record, create patient
+                    $user = $existingUser;
+                    $patient = Patient::create([
+                        'user_id' => $user->id,
+                        'patient_id' => Patient::generatePatientId(),
+                        'birth_date' => $request->tanggal_lahir,
+                        'gender' => $request->jenis_kelamin,
+                        'address' => $request->alamat,
+                    ]);
+                }
+                $password = null; // Don't generate new password for existing user
+            } else {
+                // Create new user and patient
+                $password = Str::random(8);
+                $user = User::create([
+                    'name' => $request->nama,
+                    'email' => $request->email,
+                    'password' => Hash::make($password),
+                    'role' => 'patient',
+                    'phone' => $request->telepon,
+                    'is_active' => true,
+                ]);
 
-            // Create patient record
-            $patient = Patient::create([
-                'user_id' => $user->id,
-                'patient_id' => Patient::generatePatientId(),
-                'birth_date' => $request->tanggal_lahir,
-                'gender' => $request->jenis_kelamin,
-                'address' => $request->alamat,
-            ]);
+                // Create patient record
+                $patient = Patient::create([
+                    'user_id' => $user->id,
+                    'patient_id' => Patient::generatePatientId(),
+                    'birth_date' => $request->tanggal_lahir,
+                    'gender' => $request->jenis_kelamin,
+                    'address' => $request->alamat,
+                ]);
+            }
 
             // Create appointment
             $appointment = Appointment::create([
@@ -76,17 +101,19 @@ class AppointmentController extends Controller
 
             DB::commit();
 
-            // Send email notification
-            try {
-                Mail::to($user->email)->send(new AppointmentCreated($appointment, $password));
-            } catch (\Exception $e) {
-                // Log email error but don't fail the registration
-                \Log::error('Failed to send appointment email: ' . $e->getMessage());
+            // Send email notification only for new users
+            if ($password) {
+                try {
+                    Mail::to($user->email)->send(new AppointmentCreated($appointment, $password));
+                } catch (\Exception $e) {
+                    // Log email error but don't fail the registration
+                    \Log::error('Failed to send appointment email: ' . $e->getMessage());
+                }
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pendaftaran berhasil!',
+                'message' => $existingUser ? 'Appointment berhasil dibuat untuk akun yang sudah ada!' : 'Pendaftaran berhasil!',
                 'appointment_id' => $appointment->appointment_id,
                 'password' => $password,
                 'data' => [

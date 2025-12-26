@@ -9,6 +9,7 @@ use App\Models\Payment;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use App\Mail\AppointmentConfirmed;
 use App\Mail\PaymentVerified;
 
@@ -233,7 +234,197 @@ class AdminController extends Controller
         }
 
         $payments = $query->latest()->paginate(20);
+        
+        // Get counts for stats
+        $pendingCount = Payment::where('status', 'pending')->count();
+        $verifiedCount = Payment::where('status', 'verified')->count();
+        $rejectedCount = Payment::where('status', 'rejected')->count();
 
-        return view('admin.payments', compact('payments'));
+        return view('admin.payments', compact('payments', 'pendingCount', 'verifiedCount', 'rejectedCount'));
+    }
+
+    public function paymentDetail($id)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        
+        $payment = Payment::with(['appointment.patient.user', 'appointment.doctor', 'verifier'])
+            ->findOrFail($id);
+
+        return response()->json($payment);
+    }
+
+    public function patients(Request $request)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return redirect()->route('login')->with('error', 'Akses ditolak.');
+        }
+        
+        $patients = Patient::with(['user', 'appointments.doctor'])
+            ->withCount('appointments')
+            ->latest()
+            ->get();
+        
+        // Get stats
+        $activePatients = Patient::whereHas('appointments', function($query) {
+            $query->where('appointment_date', '>=', now()->subMonths(6));
+        })->count();
+        
+        $newThisMonth = Patient::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+        
+        $totalAppointments = Appointment::count();
+
+        return view('admin.patients', compact('patients', 'activePatients', 'newThisMonth', 'totalAppointments'));
+    }
+
+    public function patientDetail($id)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        
+        $patient = Patient::with(['user', 'appointments.doctor'])
+            ->withCount('appointments')
+            ->findOrFail($id);
+
+        return response()->json($patient);
+    }
+
+    public function patientHistory($id)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+        
+        $patient = Patient::with(['user'])->findOrFail($id);
+        $appointments = Appointment::with(['doctor', 'payment'])
+            ->where('patient_id', $patient->id)
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'patient' => $patient,
+            'appointments' => $appointments
+        ]);
+    }
+
+    public function deletePatient($id)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return redirect()->route('login')->with('error', 'Akses ditolak.');
+        }
+        
+        $patient = Patient::with(['user', 'appointments'])->findOrFail($id);
+        
+        // Check if patient has appointments and if all are completed
+        if ($patient->appointments()->count() > 0) {
+            $incompleteAppointments = $patient->appointments()
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->get();
+                
+            if ($incompleteAppointments->count() > 0) {
+                $statusList = $incompleteAppointments->pluck('status')->unique()->implode(', ');
+                return back()->with('error', "Tidak dapat menghapus pasien {$patient->user->name} karena masih memiliki appointment yang belum selesai (status: {$statusList}). Pasien hanya bisa dihapus ketika semua appointment sudah selesai atau dibatalkan.");
+            }
+        }
+
+        DB::beginTransaction();
+        
+        try {
+            $patientName = $patient->user->name;
+            $user = $patient->user;
+            
+            // Delete patient record first
+            $patient->delete();
+            
+            // Delete user account
+            $user->delete();
+            
+            DB::commit();
+            
+            return back()->with('success', "Pasien {$patientName} berhasil dihapus beserta akun user-nya.");
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', "Gagal menghapus pasien: " . $e->getMessage());
+        }
+    }
+
+    public function deleteAllPatients()
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return redirect()->route('login')->with('error', 'Akses ditolak.');
+        }
+        
+        // Get all patients without appointments
+        $patientsToDelete = Patient::with(['user'])
+            ->whereDoesntHave('appointments')
+            ->get();
+        
+        if ($patientsToDelete->count() == 0) {
+            return back()->with('info', 'Tidak ada pasien tanpa appointment yang dapat dihapus.');
+        }
+
+        DB::beginTransaction();
+        
+        try {
+            $deletedCount = 0;
+            
+            foreach ($patientsToDelete as $patient) {
+                $user = $patient->user;
+                
+                // Delete patient record first
+                $patient->delete();
+                
+                // Delete user account
+                $user->delete();
+                
+                $deletedCount++;
+            }
+            
+            DB::commit();
+            
+            return back()->with('success', "Berhasil menghapus {$deletedCount} pasien beserta akun user-nya.");
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', "Gagal menghapus pasien: " . $e->getMessage());
+        }
+    }
+
+    public function createDummyImage(Request $request)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        
+        $imagePath = $request->image_path;
+        $fullPath = storage_path('app/public/' . $imagePath);
+        
+        try {
+            // Create directory if it doesn't exist
+            $directory = dirname($fullPath);
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            
+            // Create a simple dummy image content
+            $dummyContent = "DUMMY IMAGE CONTENT FOR TESTING - " . date('Y-m-d H:i:s');
+            file_put_contents($fullPath, $dummyContent);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'File dummy berhasil dibuat'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat file dummy: ' . $e->getMessage()
+            ]);
+        }
     }
 }

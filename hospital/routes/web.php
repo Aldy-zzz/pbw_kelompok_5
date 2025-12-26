@@ -77,13 +77,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
     
     // Payments Management
     Route::get('/payments', [AdminController::class, 'payments'])->name('payments');
+    Route::get('/payments/{id}/detail', [AdminController::class, 'paymentDetail'])->name('payments.detail');
     Route::post('/payments/{id}/verify', [AdminController::class, 'verifyPayment'])->name('payments.verify');
     Route::post('/payments/{id}/reject', [AdminController::class, 'rejectPayment'])->name('payments.reject');
     
     // Doctors Management
     Route::get('/doctors', [DoctorController::class, 'adminIndex'])->name('doctors');
+    Route::get('/doctors/{id}/edit', [DoctorController::class, 'edit'])->name('doctors.edit');
     Route::post('/doctors', [DoctorController::class, 'store'])->name('doctors.store');
     Route::put('/doctors/{id}', [DoctorController::class, 'update'])->name('doctors.update');
     Route::post('/doctors/{id}/toggle', [DoctorController::class, 'toggleStatus'])->name('doctors.toggle');
     Route::delete('/doctors/{id}', [DoctorController::class, 'destroy'])->name('doctors.destroy');
+    
+    // Patients Management
+    Route::get('/patients', [AdminController::class, 'patients'])->name('patients');
+    Route::get('/patients/{id}/detail', [AdminController::class, 'patientDetail'])->name('patients.detail');
+    Route::get('/patients/{id}/history', [AdminController::class, 'patientHistory'])->name('patients.history');
+    Route::delete('/patients/{id}', [AdminController::class, 'deletePatient'])->name('patients.destroy');
+    Route::delete('/patients-delete-all', [AdminController::class, 'deleteAllPatients'])->name('patients.delete-all');
+    
+    // Utility Routes
+    Route::post('/create-dummy-image', [AdminController::class, 'createDummyImage'])->name('create.dummy.image');
 });

@@ -188,19 +188,56 @@
                     <!-- Image Preview -->
                     <div class="mb-4">
                         <div class="relative group">
+                            @if($appointment->payment->proof_image && file_exists(storage_path('app/public/' . $appointment->payment->proof_image)))
                             <img 
                                 src="{{ Storage::url($appointment->payment->proof_image) }}" 
                                 alt="Bukti Pembayaran {{ $appointment->appointment_id }}"
-                                class="w-full h-auto rounded-lg border-2 border-gray-300 shadow-md cursor-pointer hover:border-blue-500 transition-all"
+                                class="w-full h-auto max-h-64 object-contain rounded-lg border-2 border-gray-300 shadow-md cursor-pointer hover:border-blue-500 transition-all"
                                 onclick="openImageModal('{{ Storage::url($appointment->payment->proof_image) }}', '{{ $appointment->appointment_id }}')"
+                                onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMDAgNzBDOTQuNDc3MiA3MCA5MCA3NC40NzcyIDkwIDgwVjEyMEM5MCA5NC40NzcyIDk0LjQ3NzIgOTAgMTAwIDkwSDEwMEMxMDUuNTIzIDkwIDExMCA5NC40NzcyIDExMCAxMDBWMTIwQzExMCAxMjUuNTIzIDEwNS41MjMgMTMwIDEwMCAxMzBIOTBWMTQwSDExMEMxMTYuNjI3IDE0MCAyMiAxMzMuMzczIDEyMiAxMjZWMTAwQzEyMiA5My4zNzI2IDExNi42MjcgODggMTEwIDg4SDEwMFY3MFoiIGZpbGw9IiM5Q0E0QUYiLz4KPC9zdmc+'; this.classList.add('opacity-50');"
                             >
+                            @else
+                            <div class="w-full h-64 bg-gray-100 rounded-lg border-2 border-gray-300 flex items-center justify-center">
+                                <div class="text-center text-gray-500">
+                                    <svg class="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                    </svg>
+                                    <p class="text-sm">Gambar tidak tersedia</p>
+                                    <p class="text-xs text-gray-400">File: {{ $appointment->payment->proof_image }}</p>
+                                    <button onclick="createDummyImage('{{ $appointment->payment->proof_image }}')" class="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                                        Buat File Dummy
+                                    </button>
+                                </div>
+                            </div>
+                            @endif
+                            
+                            @if($appointment->payment->proof_image && file_exists(storage_path('app/public/' . $appointment->payment->proof_image)))
                             <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
                                 <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z"/>
                                 </svg>
                             </div>
+                            @endif
                         </div>
-                        <p class="text-xs text-gray-500 mt-2 text-center">Klik untuk memperbesar</p>
+                        <p class="text-xs text-gray-500 mt-2 text-center">
+                            @if($appointment->payment->proof_image && file_exists(storage_path('app/public/' . $appointment->payment->proof_image)))
+                                Klik untuk memperbesar
+                            @else
+                                Gambar tidak dapat dimuat
+                            @endif
+                        </p>
+                        
+                        <!-- Download Button -->
+                        @if($appointment->payment->proof_image && file_exists(storage_path('app/public/' . $appointment->payment->proof_image)))
+                        <div class="mt-3 text-center">
+                            <a href="{{ Storage::url($appointment->payment->proof_image) }}" download class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
+                                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                                </svg>
+                                Download
+                            </a>
+                        </div>
+                        @endif
                     </div>
                     
                     <!-- Payment Details -->
@@ -378,10 +415,18 @@
 let currentImageSrc = '';
 
 function openImageModal(imageSrc, appointmentId) {
-    document.getElementById('modalImage').src = imageSrc;
-    document.getElementById('modalCaption').textContent = 'Bukti Pembayaran - ' + appointmentId;
-    document.getElementById('imageModal').classList.remove('hidden');
-    currentImageSrc = imageSrc;
+    // Check if image exists first
+    const img = new Image();
+    img.onload = function() {
+        document.getElementById('modalImage').src = imageSrc;
+        document.getElementById('modalCaption').textContent = 'Bukti Pembayaran - ' + appointmentId;
+        document.getElementById('imageModal').classList.remove('hidden');
+        currentImageSrc = imageSrc;
+    };
+    img.onerror = function() {
+        alert('Gambar tidak dapat dimuat. File mungkin tidak tersedia.');
+    };
+    img.src = imageSrc;
 }
 
 function closeImageModal() {
@@ -395,6 +440,32 @@ function downloadModalImage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+function createDummyImage(imagePath) {
+    fetch('/admin/create-dummy-image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            image_path: imagePath
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('File dummy berhasil dibuat! Refresh halaman untuk melihat gambar.');
+            location.reload();
+        } else {
+            alert('Gagal membuat file dummy: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan saat membuat file dummy');
+    });
 }
 
 function showRejectModal(paymentId) {

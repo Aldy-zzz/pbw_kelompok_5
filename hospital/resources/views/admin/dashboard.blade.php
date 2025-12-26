@@ -92,6 +92,9 @@
                 <a href="{{ route('admin.appointments') }}" class="py-4 px-2 border-b-2 {{ request()->routeIs('admin.appointments*') ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }} font-semibold transition-colors">
                     📋 Pendaftaran Pasien
                 </a>
+                <a href="{{ route('admin.patients') }}" class="py-4 px-2 border-b-2 {{ request()->routeIs('admin.patients*') ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }} font-semibold transition-colors">
+                    👥 Kelola Pasien
+                </a>
                 <a href="{{ route('admin.doctors') }}" class="py-4 px-2 border-b-2 {{ request()->routeIs('admin.doctors*') ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }} font-semibold transition-colors">
                     👨‍⚕️ Kelola Dokter
                 </a>
@@ -205,4 +208,6 @@
         </div>
     </div>
 </div>
+
+<script>
 @endsection
