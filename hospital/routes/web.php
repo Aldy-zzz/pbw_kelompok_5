@@ -34,11 +34,10 @@ Route::middleware('guest')->group(function () {
     // Login pages
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     
-    // Admin login
-    Route::post('/admin/login', [AuthController::class, 'adminLogin'])->name('admin.login');
+    // Unified login
+    Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
     
-    // Patient login (with appointment ID or email)
-    Route::post('/patient/login', [AuthController::class, 'patientLogin'])->name('patient.login');
+    // Patient login with ID (alternative method)
     Route::post('/patient/login-id', [AuthController::class, 'patientLoginWithId'])->name('patient.login.id');
 });
 
@@ -46,24 +45,28 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 
 /*
 |--------------------------------------------------------------------------
-| Patient Routes - TANPA middleware() di controller
+| Patient Routes - Protected with auth and role check
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('patient')->name('patient.')->group(function () {
+Route::prefix('patient')->name('patient.')->middleware(['auth'])->group(function () {
     Route::get('/dashboard', [PatientController::class, 'dashboard'])->name('dashboard');
     Route::get('/status/{appointmentId}', [PatientController::class, 'status'])->name('status');
     Route::get('/history', [PatientController::class, 'history'])->name('history');
     Route::post('/upload-payment', [PatientController::class, 'uploadPaymentProof'])->name('upload.payment');
+    
+    // Create new appointment
+    Route::get('/appointments/create', [PatientController::class, 'createAppointment'])->name('appointments.create');
+    Route::post('/appointments', [PatientController::class, 'storeAppointment'])->name('appointments.store');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Admin Routes - TANPA middleware() di controller  
+| Admin Routes - Protected with auth and role check
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     
@@ -94,8 +97,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/patients/{id}/detail', [AdminController::class, 'patientDetail'])->name('patients.detail');
     Route::get('/patients/{id}/history', [AdminController::class, 'patientHistory'])->name('patients.history');
     Route::delete('/patients/{id}', [AdminController::class, 'deletePatient'])->name('patients.destroy');
-    Route::delete('/patients-delete-all', [AdminController::class, 'deleteAllPatients'])->name('patients.delete-all');
+    Route::post('/patients-delete-all', [AdminController::class, 'deleteAllPatients'])->name('patients.delete-all');
     
     // Utility Routes
-    Route::post('/create-dummy-image', [AdminController::class, 'createDummyImage'])->name('create.dummy.image');
 });

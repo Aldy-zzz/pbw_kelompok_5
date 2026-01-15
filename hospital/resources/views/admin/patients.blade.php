@@ -13,7 +13,7 @@
                     <p class="text-gray-600 mt-2">Manajemen data pasien rumah sakit</p>
                 </div>
                 
-                <!-- Search and Filter -->
+                <!-- Search and Actions -->
                 <div class="flex space-x-4">
                     <div class="relative">
                         <input type="text" id="searchPatient" placeholder="Cari pasien..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-64">
@@ -21,6 +21,15 @@
                             <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                         </svg>
                     </div>
+                    
+                    @if($patients->count() > 0)
+                    <button onclick="confirmDeleteAllPatients()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all inline-flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                        Hapus Semua Data
+                    </button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -317,6 +326,77 @@
     </div>
 </div>
 
+<!-- Delete All Patients Modal -->
+<div id="deleteAllPatientsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-2xl font-bold text-red-600">⚠️ Konfirmasi Hapus Semua Data Pasien</h3>
+            </div>
+            
+            <div class="p-6">
+                <div class="flex items-start mb-6">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                        <svg class="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-gray-800 font-bold text-lg mb-2">Apakah Anda YAKIN ingin menghapus SEMUA data pasien?</p>
+                        <p class="text-sm text-gray-600">Tindakan ini sangat berbahaya dan tidak dapat dibatalkan!</p>
+                    </div>
+                </div>
+                
+                <div class="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-6">
+                    <div class="text-sm text-red-800">
+                        <p class="font-bold mb-2">🔥 PERINGATAN KERAS:</p>
+                        <p class="mb-2">Tindakan ini akan menghapus:</p>
+                        <ul class="list-disc list-inside space-y-1 mb-3">
+                            <li><strong>SEMUA data pasien</strong> ({{ $patients->count() }} pasien)</li>
+                            <li><strong>SEMUA appointment</strong></li>
+                            <li><strong>SEMUA pembayaran</strong></li>
+                            <li><strong>SEMUA user pasien</strong></li>
+                            <li><strong>SEMUA gambar bukti pembayaran</strong></li>
+                        </ul>
+                        <p class="font-bold text-red-900">⚠️ TINDAKAN INI TIDAK DAPAT DIBATALKAN!</p>
+                        <p class="mt-2 text-xs">ID akan direset dan dimulai dari RSH001</p>
+                    </div>
+                </div>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                        </svg>
+                        <div class="text-sm text-blue-800">
+                            <p class="font-semibold mb-1">ℹ️ Yang TIDAK akan terhapus:</p>
+                            <ul class="list-disc list-inside">
+                                <li>Data admin</li>
+                                <li>Data dokter</li>
+                                <li>Konfigurasi sistem</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <form id="deleteAllPatientsForm" onsubmit="event.preventDefault(); deleteAllPatients();">
+                    <div class="flex justify-end space-x-4">
+                        <button type="button" onclick="hideDeleteAllPatientsModal()" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold">
+                            Batal
+                        </button>
+                        <button type="submit" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold inline-flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                            Ya, Hapus Semua Data!
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Search functionality
 document.getElementById('searchPatient').addEventListener('input', function(e) {
@@ -554,6 +634,69 @@ document.addEventListener('click', function(e) {
     if (e.target.id === 'deletePatientModal') {
         hideDeletePatientModal();
     }
+    if (e.target.id === 'deleteAllPatientsModal') {
+        hideDeleteAllPatientsModal();
+    }
 });
+
+// Delete all patients functions
+function confirmDeleteAllPatients() {
+    document.getElementById('deleteAllPatientsModal').classList.remove('hidden');
+}
+
+function hideDeleteAllPatientsModal() {
+    document.getElementById('deleteAllPatientsModal').classList.add('hidden');
+}
+
+function deleteAllPatients() {
+    const form = document.getElementById('deleteAllPatientsForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Menghapus...';
+    
+    fetch('{{ route("admin.patients.delete-all") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            hideDeleteAllPatientsModal();
+            
+            // Show success notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    <span>${data.message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            // Reload page after 2 seconds
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            alert(data.message || 'Terjadi kesalahan saat menghapus data');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan saat menghapus data');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
 </script>
 @endsection

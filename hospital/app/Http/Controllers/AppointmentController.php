@@ -15,12 +15,14 @@ use App\Mail\AppointmentCreated;
 
 class AppointmentController extends Controller
 {
+    // Public registration - with strict validation
     public function create()
     {
         $doctors = Doctor::active()->get();
         return view('appointment.create', compact('doctors'));
     }
 
+    // Store appointment - only for NEW patients (first time registration)
     public function store(Request $request)
     {
         $request->validate([
@@ -39,53 +41,53 @@ class AppointmentController extends Controller
         DB::beginTransaction();
 
         try {
+            // STRICT VALIDATION: Check if email OR phone already exists
+            $existingUserByEmail = User::where('email', $request->email)->first();
+            $existingUserByPhone = User::where('phone', $request->telepon)->first();
+            
+            if ($existingUserByEmail || $existingUserByPhone) {
+                DB::rollBack();
+                
+                $message = 'Email atau nomor HP sudah terdaftar! ';
+                if ($existingUserByEmail && $existingUserByPhone) {
+                    $message .= 'Email dan nomor HP Anda sudah terdaftar di sistem. ';
+                } elseif ($existingUserByEmail) {
+                    $message .= 'Email Anda sudah terdaftar di sistem. ';
+                } else {
+                    $message .= 'Nomor HP Anda sudah terdaftar di sistem. ';
+                }
+                $message .= 'Silakan login untuk membuat janji temu baru.';
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'already_registered' => true,
+                    'redirect_to_login' => true
+                ], 400);
+            }
+
             // Get doctor
             $doctor = Doctor::findOrFail($request->doctor_id);
 
-            // Check if user already exists
-            $existingUser = User::where('email', $request->email)->first();
-            
-            if ($existingUser) {
-                // If user exists, check if they already have a patient record
-                $existingPatient = Patient::where('user_id', $existingUser->id)->first();
-                
-                if ($existingPatient) {
-                    // User and patient exist, just create appointment
-                    $user = $existingUser;
-                    $patient = $existingPatient;
-                } else {
-                    // User exists but no patient record, create patient
-                    $user = $existingUser;
-                    $patient = Patient::create([
-                        'user_id' => $user->id,
-                        'patient_id' => Patient::generatePatientId(),
-                        'birth_date' => $request->tanggal_lahir,
-                        'gender' => $request->jenis_kelamin,
-                        'address' => $request->alamat,
-                    ]);
-                }
-                $password = null; // Don't generate new password for existing user
-            } else {
-                // Create new user and patient
-                $password = Str::random(8);
-                $user = User::create([
-                    'name' => $request->nama,
-                    'email' => $request->email,
-                    'password' => Hash::make($password),
-                    'role' => 'patient',
-                    'phone' => $request->telepon,
-                    'is_active' => true,
-                ]);
+            // Create NEW user and patient (first time registration)
+            $password = Str::random(8);
+            $user = User::create([
+                'name' => $request->nama,
+                'email' => $request->email,
+                'password' => Hash::make($password),
+                'role' => 'patient',
+                'phone' => $request->telepon,
+                'is_active' => true,
+            ]);
 
-                // Create patient record
-                $patient = Patient::create([
-                    'user_id' => $user->id,
-                    'patient_id' => Patient::generatePatientId(),
-                    'birth_date' => $request->tanggal_lahir,
-                    'gender' => $request->jenis_kelamin,
-                    'address' => $request->alamat,
-                ]);
-            }
+            // Create patient record
+            $patient = Patient::create([
+                'user_id' => $user->id,
+                'patient_id' => Patient::generatePatientId(),
+                'birth_date' => $request->tanggal_lahir,
+                'gender' => $request->jenis_kelamin,
+                'address' => $request->alamat,
+            ]);
 
             // Create appointment
             $appointment = Appointment::create([
@@ -101,25 +103,25 @@ class AppointmentController extends Controller
 
             DB::commit();
 
-            // Send email notification only for new users
-            if ($password) {
-                try {
-                    Mail::to($user->email)->send(new AppointmentCreated($appointment, $password));
-                } catch (\Exception $e) {
-                    // Log email error but don't fail the registration
-                    \Log::error('Failed to send appointment email: ' . $e->getMessage());
-                }
+            // Send email notification
+            try {
+                Mail::to($user->email)->send(new AppointmentCreated($appointment, $password));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send appointment email: ' . $e->getMessage());
             }
 
             return response()->json([
                 'success' => true,
-                'message' => $existingUser ? 'Appointment berhasil dibuat untuk akun yang sudah ada!' : 'Pendaftaran berhasil!',
+                'message' => 'Pendaftaran berhasil! Silakan cek email Anda untuk informasi login.',
+                'is_new_user' => true,
                 'appointment_id' => $appointment->appointment_id,
+                'patient_id' => $patient->patient_id,
                 'password' => $password,
                 'data' => [
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
+                    'patient_id' => $patient->patient_id,
                     'appointment_id' => $appointment->appointment_id,
                 ]
             ]);

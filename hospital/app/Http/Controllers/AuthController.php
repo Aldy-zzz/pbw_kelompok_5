@@ -18,6 +18,57 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
+    // Unified login - handles both admin and patient
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        $credentials = $request->only('email', 'password');
+
+        // Try to authenticate without role restriction
+        if (Auth::attempt($credentials, $request->filled('remember'))) {
+            $request->session()->regenerate();
+            
+            $user = Auth::user();
+            
+            // Log for debugging
+            \Log::info('User logged in', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'role' => $user->role,
+            ]);
+            
+            // Redirect based on role
+            if ($user->role === 'admin') {
+                return redirect()->intended(route('admin.dashboard'))
+                    ->with('success', 'Login berhasil! Selamat datang di dashboard admin.');
+            } elseif ($user->role === 'patient') {
+                return redirect()->intended(route('patient.dashboard'))
+                    ->with('success', "Selamat datang, {$user->name}!");
+            }
+            
+            // If role is not recognized, logout and show error
+            \Log::warning('Invalid user role', [
+                'user_id' => $user->id,
+                'role' => $user->role,
+            ]);
+            
+            Auth::logout();
+            $request->session()->invalidate();
+            
+            return back()->withErrors([
+                'email' => 'Role pengguna tidak valid. Silakan hubungi administrator.',
+            ])->onlyInput('email');
+        }
+
+        return back()->withErrors([
+            'email' => 'Email atau password salah!',
+        ])->onlyInput('email');
+    }
+
     // Admin login
     public function adminLogin(Request $request)
     {
@@ -40,38 +91,48 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    // Patient login with appointment ID
+    // Patient login with Email and Phone (no password needed)
     public function patientLoginWithId(Request $request)
     {
         $request->validate([
-            'patient_id' => 'required|string',
+            'email' => 'required|email',
             'phone' => 'required|string',
+        ], [
+            'email.required' => 'Email harus diisi',
+            'email.email' => 'Format email tidak valid',
+            'phone.required' => 'Nomor HP harus diisi',
         ]);
 
-        // Find appointment by ID
-        $appointment = Appointment::where('appointment_id', strtoupper($request->patient_id))
-            ->with('patient.user')
+        // Find user by email
+        $user = User::where('email', $request->email)
+            ->where('role', 'patient')
             ->first();
 
-        if (!$appointment) {
+        // If user not found
+        if (!$user) {
             return back()->withErrors([
-                'patient_id' => 'ID Pendaftaran tidak ditemukan!',
-            ]);
+                'email' => 'Email tidak terdaftar! Silakan daftar terlebih dahulu.',
+            ])->onlyInput('email');
         }
 
         // Verify phone number
-        if ($appointment->patient->user->phone !== $request->phone) {
+        if ($user->phone !== $request->phone) {
             return back()->withErrors([
-                'phone' => 'Nomor telepon tidak sesuai!',
-            ]);
+                'phone' => 'Nomor HP tidak sesuai dengan email yang terdaftar!',
+            ])->withInput('email');
         }
 
         // Login the user
-        Auth::login($appointment->patient->user, true);
+        Auth::login($user, true);
         $request->session()->regenerate();
 
+        \Log::info('Patient logged in with email+phone', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+
         return redirect()->route('patient.dashboard')
-            ->with('success', "Selamat datang, {$appointment->patient->user->name}!");
+            ->with('success', "Selamat datang, {$user->name}!");
     }
 
     // Patient login with email

@@ -326,7 +326,21 @@ function showPaymentDetail(paymentId) {
                         <h4 class="text-lg font-bold text-gray-800 mb-4">Bukti Pembayaran</h4>
                         ${data.proof_image ? `
                         <div class="border border-gray-200 rounded-lg p-4">
-                            <img src="/storage/${data.proof_image}" alt="Bukti Pembayaran" class="w-full h-64 object-contain rounded-lg cursor-pointer" onclick="openImageModal('/storage/${data.proof_image}')" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div class="relative group">
+                                <img src="/storage/${data.proof_image}" 
+                                     alt="Bukti Pembayaran" 
+                                     class="w-full h-64 object-contain rounded-lg cursor-pointer hover:opacity-80 transition-opacity" 
+                                     onclick="openImageModal('/storage/${data.proof_image}')" 
+                                     onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all pointer-events-none">
+                                    <div class="bg-white bg-opacity-90 rounded-full p-3">
+                                        <svg class="w-8 h-8 text-gray-800" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                                            <path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
                             <div style="display:none;" class="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
                                 <div class="text-center text-gray-500">
                                     <svg class="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
@@ -335,9 +349,19 @@ function showPaymentDetail(paymentId) {
                                     <p class="text-sm">Gambar tidak dapat dimuat</p>
                                 </div>
                             </div>
-                            <div class="mt-4 flex justify-center">
-                                <a href="/storage/${data.proof_image}" download class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-                                    Download Bukti
+                            <div class="mt-4 flex justify-center space-x-2">
+                                <button onclick="openImageModal('/storage/${data.proof_image}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm inline-flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                                        <path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/>
+                                    </svg>
+                                    Zoom Gambar
+                                </button>
+                                <a href="/storage/${data.proof_image}" download class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm inline-flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                                    </svg>
+                                    Download
                                 </a>
                             </div>
                         </div>
@@ -389,20 +413,294 @@ function getStatusText(status) {
     }
 }
 
+let currentImageSrc = '';
+let currentZoom = 1;
+let isDragging = false;
+let startX, startY, scrollLeft, scrollTop;
+let listenersSetup = false;
+
 function openImageModal(imageSrc) {
+    console.log('openImageModal called with:', imageSrc);
+    
+    const modal = document.getElementById('imageZoomModal');
+    if (!modal) {
+        console.log('Modal not found, creating...');
+        createImageZoomModal();
+    }
+    
+    const img = document.getElementById('zoomModalImage');
+    const modalElement = document.getElementById('imageZoomModal');
+    
+    if (!img || !modalElement) {
+        console.error('Modal elements not found!');
+        return;
+    }
+    
+    img.src = imageSrc;
+    modalElement.classList.remove('hidden');
+    currentImageSrc = imageSrc;
+    currentZoom = 1;
+    resetImageZoom();
+    updateImageZoomLevel();
+    
+    console.log('Modal opened successfully');
+}
+
+function createImageZoomModal() {
+    // Check if modal already exists
+    if (document.getElementById('imageZoomModal')) {
+        return;
+    }
+    
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4';
+    modal.id = 'imageZoomModal';
+    modal.className = 'hidden fixed inset-0 z-[60] bg-black bg-opacity-90 flex items-center justify-center p-4';
     modal.innerHTML = `
-        <div class="relative max-w-4xl max-h-full">
-            <img src="${imageSrc}" alt="Bukti Pembayaran" class="max-w-full max-h-full object-contain">
-            <button onclick="this.parentElement.parentElement.remove()" class="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75">
-                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                </svg>
-            </button>
+        <div class="w-full max-w-6xl">
+            <!-- Image Container -->
+            <div id="zoomImageContainer" class="relative bg-black rounded-lg overflow-auto max-h-[70vh] mb-4" style="cursor: default;">
+                <img id="zoomModalImage" src="" alt="Bukti Pembayaran" class="w-full h-auto transition-transform duration-200" style="cursor: zoom-in;">
+            </div>
+            
+            <!-- Controls -->
+            <div class="bg-black bg-opacity-50 rounded-lg p-4 backdrop-blur-sm">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <!-- Caption & Zoom Level -->
+                    <div class="flex-1 text-center sm:text-left">
+                        <p class="text-white text-lg font-semibold">Bukti Pembayaran</p>
+                        <p id="imageZoomLevel" class="text-white text-sm opacity-75 mt-1">Zoom: 100%</p>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <!-- Zoom In -->
+                        <button onclick="zoomImageModal(1.25)" class="bg-white bg-opacity-20 text-white p-3 rounded-lg hover:bg-opacity-30 transition-all flex items-center space-x-2" title="Zoom In (+ atau scroll up)">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                                <path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/>
+                            </svg>
+                            <span class="text-sm font-semibold hidden sm:inline">Perbesar</span>
+                        </button>
+                        
+                        <!-- Zoom Out -->
+                        <button onclick="zoomImageModal(0.8)" class="bg-white bg-opacity-20 text-white p-3 rounded-lg hover:bg-opacity-30 transition-all flex items-center space-x-2" title="Zoom Out (- atau scroll down)">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                                <path d="M7 9h5v1H7z"/>
+                            </svg>
+                            <span class="text-sm font-semibold hidden sm:inline">Perkecil</span>
+                        </button>
+                        
+                        <!-- Reset Zoom -->
+                        <button onclick="resetImageZoom()" class="bg-white bg-opacity-20 text-white p-3 rounded-lg hover:bg-opacity-30 transition-all flex items-center space-x-2" title="Reset Zoom (tekan 0)">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                            </svg>
+                            <span class="text-sm font-semibold hidden sm:inline">Reset</span>
+                        </button>
+                        
+                        <!-- Download -->
+                        <button onclick="downloadZoomModalImage()" class="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 font-semibold inline-flex items-center transition-all">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            <span class="hidden sm:inline">Download</span>
+                        </button>
+                        
+                        <!-- Close -->
+                        <button onclick="closeImageZoomModal()" class="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 font-semibold inline-flex items-center transition-all">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                            </svg>
+                            <span class="hidden sm:inline">Tutup</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Instructions -->
+                <div class="mt-3 text-center">
+                    <p class="text-white text-sm opacity-75">
+                        💡 Scroll mouse untuk zoom • Drag untuk geser gambar • ESC untuk tutup
+                    </p>
+                </div>
+            </div>
         </div>
     `;
     document.body.appendChild(modal);
+    
+    // Setup event listeners for this modal
+    attachContainerListeners();
+    
+    // Setup global keyboard listener (only once)
+    setupImageZoomListeners();
+}
+
+function closeImageZoomModal() {
+    const modal = document.getElementById('imageZoomModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        resetImageZoom();
+    }
+}
+
+function zoomImageModal(factor) {
+    const img = document.getElementById('zoomModalImage');
+    const container = document.getElementById('zoomImageContainer');
+    
+    if (!img || !container) return;
+    
+    currentZoom *= factor;
+    
+    // Limit zoom between 0.5x and 10x
+    if (currentZoom < 0.5) currentZoom = 0.5;
+    if (currentZoom > 10) currentZoom = 10;
+    
+    img.style.transform = `scale(${currentZoom})`;
+    img.style.transformOrigin = 'center center';
+    
+    // Update cursor
+    if (currentZoom > 1) {
+        container.style.cursor = 'grab';
+        img.style.cursor = 'grab';
+    } else {
+        container.style.cursor = 'default';
+        img.style.cursor = 'zoom-in';
+    }
+    
+    updateImageZoomLevel();
+}
+
+function resetImageZoom() {
+    const img = document.getElementById('zoomModalImage');
+    const container = document.getElementById('zoomImageContainer');
+    
+    if (!img || !container) return;
+    
+    currentZoom = 1;
+    img.style.transform = 'scale(1)';
+    img.style.transformOrigin = 'center center';
+    container.style.cursor = 'default';
+    img.style.cursor = 'zoom-in';
+    updateImageZoomLevel();
+}
+
+function updateImageZoomLevel() {
+    const percentage = Math.round(currentZoom * 100);
+    const zoomLevelEl = document.getElementById('imageZoomLevel');
+    if (zoomLevelEl) {
+        zoomLevelEl.textContent = `Zoom: ${percentage}%`;
+    }
+}
+
+function downloadZoomModalImage() {
+    const link = document.createElement('a');
+    link.href = currentImageSrc;
+    link.download = 'bukti_pembayaran_' + new Date().getTime() + '.jpg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+let listenersSetup = false;
+
+function setupImageZoomListeners() {
+    if (listenersSetup) return; // Prevent duplicate listeners
+    listenersSetup = true;
+    
+    // Keyboard shortcuts - global listener
+    document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('imageZoomModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeImageZoomModal();
+            }
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                zoomImageModal(1.25);
+            }
+            if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                zoomImageModal(0.8);
+            }
+            if (e.key === '0') {
+                e.preventDefault();
+                resetImageZoom();
+            }
+            if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                resetImageZoom();
+            }
+        }
+    });
+}
+
+function attachContainerListeners() {
+    // Drag to pan functionality
+    const container = document.getElementById('zoomImageContainer');
+    if (container) {
+        container.addEventListener('mousedown', (e) => {
+            if (currentZoom > 1) {
+                isDragging = true;
+                container.style.cursor = 'grabbing';
+                startX = e.pageX - container.offsetLeft;
+                startY = e.pageY - container.offsetTop;
+                scrollLeft = container.scrollLeft;
+                scrollTop = container.scrollTop;
+            }
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isDragging = false;
+            if (currentZoom > 1) {
+                container.style.cursor = 'grab';
+            }
+        });
+
+        container.addEventListener('mouseup', () => {
+            isDragging = false;
+            if (currentZoom > 1) {
+                container.style.cursor = 'grab';
+            }
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const y = e.pageY - container.offsetTop;
+            const walkX = (x - startX) * 2;
+            const walkY = (y - startY) * 2;
+            container.scrollLeft = scrollLeft - walkX;
+            container.scrollTop = scrollTop - walkY;
+        });
+    }
+    
+    // Mouse wheel zoom
+    const img = document.getElementById('zoomModalImage');
+    if (img) {
+        img.addEventListener('wheel', function(e) {
+            const modal = document.getElementById('imageZoomModal');
+            if (modal && !modal.classList.contains('hidden')) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    zoomImageModal(1.1);
+                } else {
+                    zoomImageModal(0.9);
+                }
+            }
+        }, { passive: false });
+    }
+    
+    // Close on background click
+    const modal = document.getElementById('imageZoomModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeImageZoomModal();
+            }
+        });
+    }
 }
 
 // Close modals when clicking outside
@@ -413,6 +711,11 @@ document.addEventListener('click', function(e) {
     if (e.target.id === 'rejectPaymentModal') {
         hideRejectModal();
     }
+});
+
+// Initialize zoom modal on page load
+document.addEventListener('DOMContentLoaded', function() {
+    createImageZoomModal();
 });
 </script>
 @endsection

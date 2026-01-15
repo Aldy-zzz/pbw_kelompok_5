@@ -356,42 +356,68 @@ class AdminController extends Controller
     public function deleteAllPatients()
     {
         if (!auth()->check() || auth()->user()->role !== 'admin') {
-            return redirect()->route('login')->with('error', 'Akses ditolak.');
-        }
-        
-        // Get all patients without appointments
-        $patientsToDelete = Patient::with(['user'])
-            ->whereDoesntHave('appointments')
-            ->get();
-        
-        if ($patientsToDelete->count() == 0) {
-            return back()->with('info', 'Tidak ada pasien tanpa appointment yang dapat dihapus.');
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya admin yang dapat menghapus data.'
+            ], 401);
         }
 
         DB::beginTransaction();
-        
+
         try {
-            $deletedCount = 0;
-            
-            foreach ($patientsToDelete as $patient) {
-                $user = $patient->user;
-                
-                // Delete patient record first
-                $patient->delete();
-                
-                // Delete user account
-                $user->delete();
-                
-                $deletedCount++;
+            // Count data before deletion
+            $patientsCount = Patient::count();
+            $appointmentsCount = Appointment::count();
+            $paymentsCount = Payment::count();
+            $patientUsersCount = User::where('role', 'patient')->count();
+
+            if ($patientsCount === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada data pasien yang dapat dihapus.'
+                ]);
             }
-            
+
+            // Delete payment proof images
+            $payments = Payment::whereNotNull('proof_image')->get();
+            foreach ($payments as $payment) {
+                if ($payment->proof_image && \Storage::exists('public/' . $payment->proof_image)) {
+                    \Storage::delete('public/' . $payment->proof_image);
+                }
+            }
+
+            // Delete payments
+            Payment::truncate();
+
+            // Delete appointments
+            Appointment::truncate();
+
+            // Delete patients
+            Patient::truncate();
+
+            // Delete patient users (preserve admin and other roles)
+            User::where('role', 'patient')->delete();
+
+            // Reset auto increment to start from 1 (which will generate RSH001)
+            DB::statement('ALTER TABLE patients AUTO_INCREMENT = 1');
+            DB::statement('ALTER TABLE appointments AUTO_INCREMENT = 1');
+            DB::statement('ALTER TABLE payments AUTO_INCREMENT = 1');
+
             DB::commit();
-            
-            return back()->with('success', "Berhasil menghapus {$deletedCount} pasien beserta akun user-nya.");
-            
+
+            return response()->json([
+                'success' => true,
+                'message' => "✅ Berhasil menghapus semua data! ({$patientsCount} pasien, {$appointmentsCount} appointment, {$paymentsCount} pembayaran, {$patientUsersCount} user). ID berikutnya akan dimulai dari RSH001."
+            ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', "Gagal menghapus pasien: " . $e->getMessage());
+            \Log::error('Error deleting all patients: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
         }
     }
 

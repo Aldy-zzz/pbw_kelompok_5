@@ -278,32 +278,60 @@
                     <h4 class="text-2xl font-bold text-green-800 mb-2">🎉 Janji Temu Berhasil Dibuat!</h4>
                     
                     <div class="bg-white p-4 rounded-lg mb-4 border-2 border-green-300">
-                        <p class="text-sm text-gray-600 mb-1">ID Pendaftaran Anda:</p>
+                        <p class="text-sm text-gray-600 mb-1">ID Appointment:</p>
                         <p class="text-3xl font-mono font-bold text-blue-600" id="registration-id"></p>
                     </div>
                     
-                    <div class="bg-white p-4 rounded-lg mb-4 border-2 border-blue-300">
+                    <!-- Patient ID (always show) -->
+                    <div id="patient-id-display" class="hidden bg-white p-4 rounded-lg mb-4 border-2 border-purple-300">
+                        <p class="text-sm text-gray-600 mb-1">ID Pasien Anda:</p>
+                        <p class="text-2xl font-mono font-bold text-purple-600" id="patient-id-value"></p>
+                        <p class="text-xs text-gray-500 mt-1">Gunakan untuk identifikasi di rumah sakit</p>
+                    </div>
+                    
+                    <!-- Password Section (only for new users) -->
+                    <div id="password-section" class="hidden bg-white p-4 rounded-lg mb-4 border-2 border-blue-300">
                         <p class="text-sm text-gray-600 mb-1">Password Login Anda:</p>
                         <p class="text-2xl font-mono font-bold text-red-600" id="registration-password"></p>
                         <p class="text-xs text-red-600 mt-2">⚠️ Simpan password ini! Untuk login ke dashboard</p>
                     </div>
                     
+                    <!-- Existing User Notice (only for existing users) -->
+                    <div id="existing-user-notice" class="hidden bg-blue-50 border border-blue-300 p-4 rounded-lg mb-4">
+                        <div class="flex items-start">
+                            <svg class="w-6 h-6 text-blue-600 mr-3 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                            </svg>
+                            <div class="text-left">
+                                <h5 class="font-bold text-blue-800 mb-2">ℹ️ Akun Sudah Terdaftar</h5>
+                                <p class="text-sm text-blue-700 mb-2">Anda sudah memiliki akun di sistem kami. Gunakan password yang sama untuk login.</p>
+                                <p class="text-sm text-blue-700">Jika lupa password, silakan hubungi admin atau gunakan fitur reset password.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg mb-4">
-                        <h5 class="font-bold text-yellow-800 mb-2">📝 PENTING - Simpan Informasi Ini:</h5>
+                        <h5 class="font-bold text-yellow-800 mb-2">📝 Langkah Selanjutnya:</h5>
                         <ul class="text-sm text-yellow-700 space-y-1 text-left">
-                            <li>• <strong>ID Pendaftaran</strong>, <strong>Password</strong>, dan <strong>Nomor Telepon</strong> Anda</li>
-                            <li>• Gunakan untuk login dan cek status janji temu</li>
-                            <li>• Email konfirmasi telah dikirim ke email Anda</li>
-                            <li>• Admin akan menghubungi dalam 1x24 jam</li>
+                            <li>• <strong>Login</strong> ke dashboard untuk melihat status janji temu</li>
+                            <li>• <strong>Email konfirmasi</strong> telah dikirim (cek inbox/spam)</li>
+                            <li>• <strong>Admin akan menghubungi</strong> dalam 1x24 jam untuk konfirmasi</li>
+                            <li>• Setelah dikonfirmasi, lakukan <strong>pembayaran</strong> dan upload bukti</li>
                         </ul>
                     </div>
                     
                     <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                        <a href="{{ route('login') }}" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all">
-                            🔐 Login Sekarang
+                        <a href="{{ route('login') }}" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all inline-flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                            </svg>
+                            Login Sekarang
                         </a>
-                        <a href="{{ route('home') }}" class="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-all">
-                            ← Kembali ke Beranda
+                        <a href="{{ route('home') }}" class="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-all inline-flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                            </svg>
+                            Kembali ke Beranda
                         </a>
                     </div>
                 </div>
@@ -481,17 +509,53 @@ document.getElementById('appointment-form').addEventListener('submit', async fun
         if (data.success) {
             document.getElementById('appointment-form').classList.add('hidden');
             document.getElementById('registration-id').textContent = data.appointment_id;
-            document.getElementById('registration-password').textContent = data.password;
+            
+            // Show different message for existing vs new users
+            const passwordSection = document.getElementById('password-section');
+            const existingUserNotice = document.getElementById('existing-user-notice');
+            const patientIdDisplay = document.getElementById('patient-id-display');
+            
+            if (data.is_new_user && data.password) {
+                // New user - show password
+                document.getElementById('registration-password').textContent = data.password;
+                passwordSection.classList.remove('hidden');
+                existingUserNotice.classList.add('hidden');
+            } else {
+                // Existing user - hide password, show notice
+                passwordSection.classList.add('hidden');
+                existingUserNotice.classList.remove('hidden');
+            }
+            
+            // Show patient ID
+            if (data.patient_id) {
+                document.getElementById('patient-id-value').textContent = data.patient_id;
+                patientIdDisplay.classList.remove('hidden');
+            }
+            
             document.getElementById('success-message').classList.remove('hidden');
             
-            showNotification('🎉 Pendaftaran berhasil!', 'success');
+            showNotification(data.message, 'success');
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            showNotification(data.message || 'Terjadi kesalahan!', 'error');
-            submitBtn.disabled = false;
-            submitBtn.textContent = '🎉 Daftar Sekarang';
-}
+            // Check if user already registered
+            if (data.already_registered && data.redirect_to_login) {
+                // Show error with redirect to login
+                showNotification(data.message, 'error');
+                
+                // Show modal or alert with redirect option
+                if (confirm(data.message + '\n\nKlik OK untuk ke halaman login.')) {
+                    window.location.href = '{{ route("login") }}';
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🎉 Daftar Sekarang';
+                }
+            } else {
+                showNotification(data.message || 'Terjadi kesalahan!', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🎉 Daftar Sekarang';
+            }
+        }
 } catch (error) {
 showNotification('Terjadi kesalahan saat mengirim data!', 'error');
 submitBtn.disabled = false;

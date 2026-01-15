@@ -188,49 +188,62 @@
                     <!-- Image Preview -->
                     <div class="mb-4">
                         <div class="relative group">
-                            @if($appointment->payment->proof_image && file_exists(storage_path('app/public/' . $appointment->payment->proof_image)))
+                            @php
+                                $imagePath = $appointment->payment->proof_image;
+                                $fullPath = storage_path('app/public/' . $imagePath);
+                                $imageExists = file_exists($fullPath);
+                                $imageUrl = asset('storage/' . $imagePath);
+                            @endphp
+                            
+                            @if($imageExists)
                             <img 
-                                src="{{ Storage::url($appointment->payment->proof_image) }}" 
+                                src="{{ $imageUrl }}" 
                                 alt="Bukti Pembayaran {{ $appointment->appointment_id }}"
                                 class="w-full h-auto max-h-64 object-contain rounded-lg border-2 border-gray-300 shadow-md cursor-pointer hover:border-blue-500 transition-all"
-                                onclick="openImageModal('{{ Storage::url($appointment->payment->proof_image) }}', '{{ $appointment->appointment_id }}')"
-                                onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMDAgNzBDOTQuNDc3MiA3MCA5MCA3NC40NzcyIDkwIDgwVjEyMEM5MCA5NC40NzcyIDk0LjQ3NzIgOTAgMTAwIDkwSDEwMEMxMDUuNTIzIDkwIDExMCA5NC40NzcyIDExMCAxMDBWMTIwQzExMCAxMjUuNTIzIDEwNS41MjMgMTMwIDEwMCAxMzBIOTBWMTQwSDExMEMxMTYuNjI3IDE0MCAyMiAxMzMuMzczIDEyMiAxMjZWMTAwQzEyMiA5My4zNzI2IDExNi42MjcgODggMTEwIDg4SDEwMFY3MFoiIGZpbGw9IiM5Q0E0QUYiLz4KPC9zdmc+'; this.classList.add('opacity-50');"
+                                onclick="openImageModal('{{ $imageUrl }}', '{{ $appointment->appointment_id }}')"
+                                id="paymentProofImage"
                             >
-                            @else
-                            <div class="w-full h-64 bg-gray-100 rounded-lg border-2 border-gray-300 flex items-center justify-center">
-                                <div class="text-center text-gray-500">
-                                    <svg class="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                                    </svg>
-                                    <p class="text-sm">Gambar tidak tersedia</p>
-                                    <p class="text-xs text-gray-400">File: {{ $appointment->payment->proof_image }}</p>
-                                    <button onclick="createDummyImage('{{ $appointment->payment->proof_image }}')" class="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
-                                        Buat File Dummy
-                                    </button>
-                                </div>
-                            </div>
-                            @endif
-                            
-                            @if($appointment->payment->proof_image && file_exists(storage_path('app/public/' . $appointment->payment->proof_image)))
-                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer" onclick="openImageModal('{{ $imageUrl }}', '{{ $appointment->appointment_id }}')">
                                 <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z"/>
                                 </svg>
                             </div>
+                            @else
+                            <div class="w-full h-64 bg-gray-100 rounded-lg border-2 border-dashed border-red-300 flex items-center justify-center">
+                                <div class="text-center text-gray-500 p-4">
+                                    <svg class="w-16 h-16 mx-auto mb-2 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                    </svg>
+                                    <p class="text-sm font-semibold text-red-600 mb-1">⚠️ File Tidak Ditemukan</p>
+                                    <p class="text-xs text-gray-500 mb-2">File gambar tidak ada di server</p>
+                                    <p class="text-xs text-gray-400 font-mono bg-gray-200 p-2 rounded">{{ $imagePath }}</p>
+                                    <div class="mt-3 text-xs text-left text-gray-600">
+                                        <p class="font-semibold mb-1">Kemungkinan penyebab:</p>
+                                        <ul class="list-disc list-inside space-y-1">
+                                            <li>Upload gagal/terputus</li>
+                                            <li>File terhapus dari storage</li>
+                                            <li>Masalah permission folder</li>
+                                        </ul>
+                                    </div>
+                                    <button onclick="requestReupload('{{ $appointment->appointment_id }}')" class="mt-3 px-4 py-2 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                                        Minta Pasien Upload Ulang
+                                    </button>
+                                </div>
+                            </div>
                             @endif
                         </div>
                         <p class="text-xs text-gray-500 mt-2 text-center">
-                            @if($appointment->payment->proof_image && file_exists(storage_path('app/public/' . $appointment->payment->proof_image)))
-                                Klik untuk memperbesar
+                            @if($imageExists)
+                                Klik untuk memperbesar • File: {{ basename($imagePath) }}
                             @else
-                                Gambar tidak dapat dimuat
+                                <span class="text-red-600">⚠️ File tidak dapat dimuat - Hubungi pasien untuk upload ulang</span>
                             @endif
                         </p>
                         
                         <!-- Download Button -->
-                        @if($appointment->payment->proof_image && file_exists(storage_path('app/public/' . $appointment->payment->proof_image)))
+                        @if($imageExists)
                         <div class="mt-3 text-center">
-                            <a href="{{ Storage::url($appointment->payment->proof_image) }}" download class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
+                            <a href="{{ $imageUrl }}" download class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
                                 <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
                                 </svg>
@@ -346,22 +359,82 @@
 </div>
 
 <!-- Image Modal -->
-<div id="imageModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
-    <div class="relative max-w-5xl w-full">
-        <button onclick="closeImageModal()" class="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 transition-all z-10">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+<div id="imageModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center p-4" onclick="closeImageModal()">
+    <div class="relative max-w-7xl w-full" onclick="event.stopPropagation()">
+        <!-- Close Button -->
+        <button onclick="closeImageModal()" class="absolute -top-12 right-0 bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg hover:bg-opacity-30 transition-all flex items-center space-x-2">
+            <span class="text-sm font-semibold">Tutup</span>
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
             </svg>
         </button>
-        <img id="modalImage" src="" alt="Bukti Pembayaran" class="w-full h-auto max-h-[90vh] object-contain rounded-lg">
-        <div class="mt-4 text-center">
-            <p id="modalCaption" class="text-white text-lg font-semibold"></p>
-            <button onclick="downloadModalImage()" class="mt-3 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold inline-flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                </svg>
-                Download Bukti Bayar
-            </button>
+        
+        <!-- Image Container with Zoom -->
+        <div class="bg-white rounded-lg p-2 shadow-2xl">
+            <div class="relative overflow-auto max-h-[85vh]" id="imageContainer" style="cursor: grab;">
+                <img id="modalImage" src="" alt="Bukti Pembayaran" class="w-full h-auto object-contain transition-transform duration-200 select-none" draggable="false">
+            </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="mt-4 flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0 sm:space-x-3">
+            <!-- Caption & Zoom Level -->
+            <div class="flex-1 text-center sm:text-left">
+                <p id="modalCaption" class="text-white text-lg font-semibold"></p>
+                <p id="zoomLevel" class="text-white text-sm opacity-75 mt-1">Zoom: 100%</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap justify-center gap-2">
+                <!-- Zoom In -->
+                <button onclick="zoomImage(1.25)" class="bg-white bg-opacity-20 text-white p-3 rounded-lg hover:bg-opacity-30 transition-all flex items-center space-x-2" title="Zoom In (+ atau scroll up)">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                        <path d="M12 10h-2v2H9v-2H7V9h2V7h1v2h2v1z"/>
+                    </svg>
+                    <span class="text-sm font-semibold hidden sm:inline">Perbesar</span>
+                </button>
+                
+                <!-- Zoom Out -->
+                <button onclick="zoomImage(0.8)" class="bg-white bg-opacity-20 text-white p-3 rounded-lg hover:bg-opacity-30 transition-all flex items-center space-x-2" title="Zoom Out (- atau scroll down)">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                        <path d="M7 9h5v1H7z"/>
+                    </svg>
+                    <span class="text-sm font-semibold hidden sm:inline">Perkecil</span>
+                </button>
+                
+                <!-- Reset Zoom -->
+                <button onclick="resetZoom()" class="bg-white bg-opacity-20 text-white p-3 rounded-lg hover:bg-opacity-30 transition-all flex items-center space-x-2" title="Reset Zoom (tekan 0)">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                    </svg>
+                    <span class="text-sm font-semibold hidden sm:inline">Reset</span>
+                </button>
+                
+                <!-- Fit to Screen -->
+                <button onclick="fitToScreen()" class="bg-white bg-opacity-20 text-white p-3 rounded-lg hover:bg-opacity-30 transition-all flex items-center space-x-2" title="Fit to Screen">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                    </svg>
+                    <span class="text-sm font-semibold hidden sm:inline">Fit</span>
+                </button>
+                
+                <!-- Download -->
+                <button onclick="downloadModalImage()" class="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 font-semibold inline-flex items-center transition-all">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                    <span class="hidden sm:inline">Download</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="mt-3 text-center">
+            <p class="text-white text-sm opacity-75">
+                💡 Scroll mouse untuk zoom • Drag untuk geser gambar • ESC untuk tutup
+            </p>
         </div>
     </div>
 </div>
@@ -413,24 +486,89 @@
 @push('scripts')
 <script>
 let currentImageSrc = '';
+let currentZoom = 1;
+let isDragging = false;
+let startX, startY, scrollLeft, scrollTop;
 
 function openImageModal(imageSrc, appointmentId) {
-    // Check if image exists first
-    const img = new Image();
-    img.onload = function() {
-        document.getElementById('modalImage').src = imageSrc;
-        document.getElementById('modalCaption').textContent = 'Bukti Pembayaran - ' + appointmentId;
-        document.getElementById('imageModal').classList.remove('hidden');
-        currentImageSrc = imageSrc;
-    };
-    img.onerror = function() {
-        alert('Gambar tidak dapat dimuat. File mungkin tidak tersedia.');
-    };
-    img.src = imageSrc;
+    console.log('openImageModal called');
+    console.log('Image src:', imageSrc);
+    console.log('Appointment ID:', appointmentId);
+    
+    const modalImage = document.getElementById('modalImage');
+    const modalCaption = document.getElementById('modalCaption');
+    const imageModal = document.getElementById('imageModal');
+    
+    if (!modalImage || !modalCaption || !imageModal) {
+        console.error('Modal elements not found!');
+        console.error('modalImage:', modalImage);
+        console.error('modalCaption:', modalCaption);
+        console.error('imageModal:', imageModal);
+        return;
+    }
+    
+    modalImage.src = imageSrc;
+    modalCaption.textContent = 'Bukti Pembayaran - ' + appointmentId;
+    imageModal.classList.remove('hidden');
+    currentImageSrc = imageSrc;
+    currentZoom = 1;
+    resetZoom();
+    updateZoomLevel();
+    
+    console.log('Modal opened successfully');
 }
 
 function closeImageModal() {
     document.getElementById('imageModal').classList.add('hidden');
+    resetZoom();
+}
+
+function zoomImage(factor) {
+    const img = document.getElementById('modalImage');
+    const container = document.getElementById('imageContainer');
+    
+    currentZoom *= factor;
+    
+    // Limit zoom between 0.5x and 10x
+    if (currentZoom < 0.5) currentZoom = 0.5;
+    if (currentZoom > 10) currentZoom = 10;
+    
+    img.style.transform = `scale(${currentZoom})`;
+    img.style.transformOrigin = 'center center';
+    
+    // Update cursor
+    if (currentZoom > 1) {
+        container.style.cursor = 'grab';
+        img.style.cursor = 'grab';
+    } else {
+        container.style.cursor = 'default';
+        img.style.cursor = 'zoom-in';
+    }
+    
+    updateZoomLevel();
+}
+
+function resetZoom() {
+    const img = document.getElementById('modalImage');
+    const container = document.getElementById('imageContainer');
+    currentZoom = 1;
+    img.style.transform = 'scale(1)';
+    img.style.transformOrigin = 'center center';
+    container.style.cursor = 'default';
+    img.style.cursor = 'zoom-in';
+    updateZoomLevel();
+}
+
+function fitToScreen() {
+    resetZoom();
+}
+
+function updateZoomLevel() {
+    const percentage = Math.round(currentZoom * 100);
+    const zoomLevelEl = document.getElementById('zoomLevel');
+    if (zoomLevelEl) {
+        zoomLevelEl.textContent = `Zoom: ${percentage}%`;
+    }
 }
 
 function downloadModalImage() {
@@ -442,30 +580,10 @@ function downloadModalImage() {
     document.body.removeChild(link);
 }
 
-function createDummyImage(imagePath) {
-    fetch('/admin/create-dummy-image', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            image_path: imagePath
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('File dummy berhasil dibuat! Refresh halaman untuk melihat gambar.');
-            location.reload();
-        } else {
-            alert('Gagal membuat file dummy: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan saat membuat file dummy');
-    });
+function requestReupload(appointmentId) {
+    if (confirm('Kirim notifikasi ke pasien untuk upload ulang bukti pembayaran?')) {
+        alert('Fitur notifikasi akan segera ditambahkan. Sementara ini, hubungi pasien secara manual untuk upload ulang bukti pembayaran.');
+    }
 }
 
 function showRejectModal(paymentId) {
@@ -488,20 +606,56 @@ function closeCancelModal() {
     document.getElementById('cancelModal').classList.add('hidden');
 }
 
-// Close modals when clicking outside
-document.getElementById('imageModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeImageModal();
+// Drag to pan functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('imageContainer');
+    if (container) {
+        container.addEventListener('mousedown', (e) => {
+            if (currentZoom > 1) {
+                isDragging = true;
+                container.style.cursor = 'grabbing';
+                startX = e.pageX - container.offsetLeft;
+                startY = e.pageY - container.offsetTop;
+                scrollLeft = container.scrollLeft;
+                scrollTop = container.scrollTop;
+            }
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isDragging = false;
+            if (currentZoom > 1) {
+                container.style.cursor = 'grab';
+            }
+        });
+
+        container.addEventListener('mouseup', () => {
+            isDragging = false;
+            if (currentZoom > 1) {
+                container.style.cursor = 'grab';
+            }
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const y = e.pageY - container.offsetTop;
+            const walkX = (x - startX) * 2;
+            const walkY = (y - startY) * 2;
+            container.scrollLeft = scrollLeft - walkX;
+            container.scrollTop = scrollTop - walkY;
+        });
     }
 });
 
-document.getElementById('rejectModal').addEventListener('click', function(e) {
+// Close modals when clicking outside
+document.getElementById('rejectModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         closeRejectModal();
     }
 });
 
-document.getElementById('cancelModal').addEventListener('click', function(e) {
+document.getElementById('cancelModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         closeCancelModal();
     }
@@ -513,6 +667,54 @@ document.addEventListener('keydown', function(e) {
         closeImageModal();
         closeRejectModal();
         closeCancelModal();
+    }
+    
+    // Zoom shortcuts when modal is open
+    if (!document.getElementById('imageModal').classList.contains('hidden')) {
+        if (e.key === '+' || e.key === '=') {
+            e.preventDefault();
+            zoomImage(1.25);
+        }
+        if (e.key === '-' || e.key === '_') {
+            e.preventDefault();
+            zoomImage(0.8);
+        }
+        if (e.key === '0') {
+            e.preventDefault();
+            resetZoom();
+        }
+        if (e.key === 'f' || e.key === 'F') {
+            e.preventDefault();
+            fitToScreen();
+        }
+    }
+});
+
+// Mouse wheel zoom
+document.getElementById('modalImage')?.addEventListener('wheel', function(e) {
+    if (!document.getElementById('imageModal').classList.contains('hidden')) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+            zoomImage(1.1);
+        } else {
+            zoomImage(0.9);
+        }
+    }
+}, { passive: false });
+
+// Add click event listener to payment proof image as backup
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentProofImage = document.getElementById('paymentProofImage');
+    if (paymentProofImage) {
+        console.log('Payment proof image found, adding click listener');
+        paymentProofImage.addEventListener('click', function() {
+            console.log('Image clicked via event listener');
+            const imageSrc = this.src;
+            const appointmentId = '{{ $appointment->appointment_id }}';
+            openImageModal(imageSrc, appointmentId);
+        });
+    } else {
+        console.log('Payment proof image not found');
     }
 });
 </script>
